@@ -43,13 +43,14 @@ function Partners() {
   if (error) {
     return (
       <div className="space-y-6">
+
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
             Partners
           </h1>
 
           <p className="mt-1 text-sm text-slate-500">
-            Manage Optocare partners.
+            Manage Optocare partners and their accounts.
           </p>
         </div>
 
@@ -62,6 +63,7 @@ function Partners() {
             {error}
           </p>
         </div>
+
       </div>
     );
   }
@@ -70,58 +72,76 @@ function Partners() {
     <div className="space-y-8">
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">
-          Partners
-        </h1>
+      <div className="flex items-start justify-between">
 
-        <p className="mt-1 text-sm text-slate-500">
-          Manage and review registered Optocare partners.
-        </p>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            Partners
+          </h1>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Manage Optocare partners and their accounts.
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-slate-100 px-4 py-2">
+          <span className="text-sm font-medium text-slate-600">
+            {partners.length}{" "}
+            {partners.length === 1 ? "Partner" : "Partners"}
+          </span>
+        </div>
+
       </div>
 
-      {/* Partners table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      {/* Empty state */}
+      {partners.length === 0 ? (
 
-        {partners.length === 0 ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
 
-          <div className="p-10 text-center">
-            <h2 className="text-lg font-semibold text-slate-900">
-              No partners yet
-            </h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            No partners found
+          </h2>
 
-            <p className="mt-2 text-sm text-slate-500">
-              Approved partner applications will appear here.
-            </p>
-          </div>
+          <p className="mt-2 text-sm text-slate-500">
+            Approved partner applications will appear here.
+          </p>
 
-        ) : (
+        </div>
+
+      ) : (
+
+        /* Partners table */
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 
           <div className="overflow-x-auto">
 
-            <table className="w-full text-left">
+            <table className="min-w-full">
 
               <thead className="border-b border-slate-200 bg-slate-50">
 
                 <tr>
 
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Partner
                   </th>
 
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Company
                   </th>
 
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Type
                   </th>
 
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Status
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Location
                   </th>
 
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Account
+                  </th>
+
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Verification
                   </th>
 
@@ -141,36 +161,66 @@ function Partners() {
                     className="cursor-pointer transition hover:bg-slate-50"
                   >
 
-                    <td className="px-6 py-4">
+                    {/* Partner */}
+                    <td className="px-6 py-5">
 
-                      <p className="font-medium text-slate-900">
-                        {partner.user?.name || "—"}
+                      <div>
+
+                        <p className="font-medium text-slate-900">
+                          {partner.user?.name || "—"}
+                        </p>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                          {partner.user?.email || "—"}
+                        </p>
+
+                      </div>
+
+                    </td>
+
+                    {/* Company */}
+                    <td className="px-6 py-5">
+
+                      <p className="text-sm font-medium text-slate-800">
+                        {partner.company_name || "—"}
                       </p>
 
-                      <p className="mt-1 text-xs text-slate-500">
-                        {partner.user?.email || "—"}
-                      </p>
+                    </td>
+
+                    {/* Partner type */}
+                    <td className="px-6 py-5">
+
+                      <span className="text-sm text-slate-600">
+                        {partner.partner_type || "—"}
+                      </span>
 
                     </td>
 
-                    <td className="px-6 py-4 text-sm text-slate-700">
-                      {partner.company_name || "—"}
+                    {/* Location */}
+                    <td className="px-6 py-5">
+
+                      <span className="text-sm text-slate-600">
+                        {partner.location || "—"}
+                      </span>
+
                     </td>
 
-                    <td className="px-6 py-4 text-sm text-slate-700">
-                      {partner.partner_type || "—"}
-                    </td>
+                    {/* Account status */}
+                    <td className="px-6 py-5">
 
-                    <td className="px-6 py-4">
-                      <StatusBadge
+                      <AccountBadge
                         active={partner.user?.is_active}
                       />
+
                     </td>
 
-                    <td className="px-6 py-4">
+                    {/* Verification */}
+                    <td className="px-6 py-5">
+
                       <VerificationBadge
                         verified={partner.is_verified}
                       />
+
                     </td>
 
                   </tr>
@@ -183,15 +233,15 @@ function Partners() {
 
           </div>
 
-        )}
+        </div>
 
-      </div>
+      )}
 
     </div>
   );
 }
 
-function StatusBadge({ active }) {
+function AccountBadge({ active }) {
   return (
     <span
       className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
