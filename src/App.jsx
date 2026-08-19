@@ -13,7 +13,9 @@ import AdminLayout from "./components/layout/AdminLayout"
 import Login from "./pages/Login"
 import Dashboard from "./pages/Dashboard"
 import Applications from "./pages/Applications"
+import ApplicationDetails from "./pages/ApplicationDetails"
 import Partners from "./pages/Partners"
+import PartnerDetails from "./pages/PartnerDetails"
 import Services from "./pages/Services"
 import Products from "./pages/Products"
 import Reviews from "./pages/Reviews"
@@ -46,8 +48,18 @@ function App() {
               />
 
               <Route
+                path="/applications/:id"
+                element={<ApplicationDetails />}
+              />
+
+              <Route
                 path="/partners"
                 element={<Partners />}
+              />
+
+              <Route 
+                path="/partners/:id"
+                element={<PartnerDetails />}
               />
 
               <Route
