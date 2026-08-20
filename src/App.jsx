@@ -17,6 +17,7 @@ import ApplicationDetails from "./pages/ApplicationDetails"
 import Partners from "./pages/Partners"
 import PartnerDetails from "./pages/PartnerDetails"
 import Services from "./pages/Services"
+import ServiceDetails from "./pages/ServiceDetails"
 import Products from "./pages/Products"
 import Reviews from "./pages/Reviews"
 
@@ -65,6 +66,11 @@ function App() {
               <Route
                 path="/services"
                 element={<Services />}
+              />
+
+              <Route
+                path="/services/:id"
+                element={<ServiceDetails />}
               />
 
               <Route
