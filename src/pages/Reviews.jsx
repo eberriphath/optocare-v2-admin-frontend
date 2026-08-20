@@ -8,6 +8,7 @@ function Reviews() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [updatingReview, setUpdatingReview] = useState(null);
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -30,40 +31,60 @@ function Reviews() {
     fetchReviews();
   }, []);
 
+  const handleModeration = async (reviewId, approved) => {
+    const action = approved ? "approve" : "reject";
+
+    const confirmed = window.confirm(
+      `Are you sure you want to ${action} this review?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setUpdatingReview(reviewId);
+    setError("");
+
+    try {
+      const response = await api.patch(
+        `/admin/reviews/${reviewId}`,
+        {
+          is_approved: approved,
+        }
+      );
+
+      setReviews((currentReviews) =>
+        currentReviews.map((review) =>
+          review.id === reviewId
+            ? {
+                ...review,
+                is_approved:
+                  response.data.review.is_approved,
+              }
+            : review
+        )
+      );
+    } catch (error) {
+      console.error(
+        `Failed to ${action} review:`,
+        error
+      );
+
+      setError(
+        error.response?.data?.error ||
+        `Unable to ${action} review.`
+      );
+    } finally {
+      setUpdatingReview(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
         <p className="text-sm text-slate-500">
           Loading reviews...
         </p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Reviews
-          </h1>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Manage reviews submitted by Optocare users.
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-red-200 bg-red-50 p-6">
-          <h2 className="font-semibold text-red-800">
-            Unable to load reviews
-          </h2>
-
-          <p className="mt-2 text-sm text-red-600">
-            {error}
-          </p>
-        </div>
-
       </div>
     );
   }
@@ -78,11 +99,21 @@ function Reviews() {
         </h1>
 
         <p className="mt-1 text-sm text-slate-500">
-          Manage reviews submitted by Optocare users.
+          Review and moderate customer feedback before
+          it appears publicly.
         </p>
       </div>
 
-      {/* Reviews table */}
+      {/* Error */}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-700">
+            {error}
+          </p>
+        </div>
+      )}
+
+      {/* Reviews */}
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 
         {reviews.length === 0 ? (
@@ -119,8 +150,8 @@ function Reviews() {
                     Status
                   </th>
 
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Date
+                  <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Actions
                   </th>
 
                 </tr>
@@ -133,21 +164,18 @@ function Reviews() {
 
                   <tr
                     key={review.id}
-                    className="cursor-pointer transition hover:bg-slate-50"
-                    onClick={() =>
-                      navigate(`/reviews/${review.id}`)
-                    }
+                    className="transition hover:bg-slate-50"
                   >
 
                     {/* Reviewer */}
                     <td className="px-6 py-5">
 
                       <p className="font-medium text-slate-900">
-                        {review.reviewer_name || "—"}
+                        {review.reviewer_name}
                       </p>
 
                       <p className="mt-1 text-sm text-slate-500">
-                        {review.reviewer_email || "—"}
+                        {review.reviewer_email || "No email"}
                       </p>
 
                     </td>
@@ -155,17 +183,25 @@ function Reviews() {
                     {/* Rating */}
                     <td className="px-6 py-5">
 
-                      <Rating
-                        rating={review.rating}
-                      />
+                      <div className="flex items-center gap-1">
+
+                        <span className="text-sm font-semibold text-slate-800">
+                          {review.rating}
+                        </span>
+
+                        <span className="text-amber-500">
+                          ★
+                        </span>
+
+                      </div>
 
                     </td>
 
                     {/* Review */}
-                    <td className="px-6 py-5">
+                    <td className="max-w-md px-6 py-5">
 
-                      <p className="max-w-md truncate text-sm text-slate-700">
-                        {review.comment || "No comment"}
+                      <p className="truncate text-sm text-slate-700">
+                        {review.comment}
                       </p>
 
                     </td>
@@ -173,18 +209,71 @@ function Reviews() {
                     {/* Status */}
                     <td className="px-6 py-5">
 
-                      <ReviewStatus
+                      <StatusBadge
                         approved={review.is_approved}
                       />
 
                     </td>
 
-                    {/* Date */}
+                    {/* Actions */}
                     <td className="px-6 py-5">
 
-                      <span className="text-sm text-slate-600">
-                        {formatDate(review.created_at)}
-                      </span>
+                      <div className="flex justify-end gap-2">
+
+                        <button
+                          onClick={() =>
+                            navigate(
+                              `/reviews/${review.id}`
+                            )
+                          }
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                        >
+                          View
+                        </button>
+
+                        {!review.is_approved ? (
+
+                          <button
+                            onClick={() =>
+                              handleModeration(
+                                review.id,
+                                true
+                              )
+                            }
+                            disabled={
+                              updatingReview ===
+                              review.id
+                            }
+                            className="rounded-lg bg-teal-700 px-3 py-2 text-xs font-medium text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {updatingReview === review.id
+                              ? "Updating..."
+                              : "Approve"}
+                          </button>
+
+                        ) : (
+
+                          <button
+                            onClick={() =>
+                              handleModeration(
+                                review.id,
+                                false
+                              )
+                            }
+                            disabled={
+                              updatingReview ===
+                              review.id
+                            }
+                            className="rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {updatingReview === review.id
+                              ? "Updating..."
+                              : "Reject"}
+                          </button>
+
+                        )}
+
+                      </div>
 
                     </td>
 
@@ -206,23 +295,7 @@ function Reviews() {
   );
 }
 
-function Rating({ rating }) {
-  return (
-    <div className="flex items-center gap-2">
-
-      <span className="font-medium text-slate-800">
-        {rating}/5
-      </span>
-
-      <span className="text-sm text-amber-500">
-        {"★".repeat(Math.max(0, Math.min(5, rating || 0)))}
-      </span>
-
-    </div>
-  );
-}
-
-function ReviewStatus({ approved }) {
+function StatusBadge({ approved }) {
   return (
     <span
       className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
@@ -234,10 +307,6 @@ function ReviewStatus({ approved }) {
       {approved ? "Approved" : "Pending"}
     </span>
   );
-}
-
-function formatDate(date) {
-  return new Date(date).toLocaleDateString();
 }
 
 export default Reviews;
