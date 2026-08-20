@@ -20,6 +20,7 @@ import Services from "./pages/Services"
 import ServiceDetails from "./pages/ServiceDetails"
 import Products from "./pages/Products"
 import Reviews from "./pages/Reviews"
+import ReviewDetails from "./pages/ReviewDetails"
 
 function App() {
   return (
@@ -81,6 +82,11 @@ function App() {
               <Route
                 path="/reviews"
                 element={<Reviews />}
+              />
+
+              <Route
+                path="/reviews/:id"
+                element={<ReviewDetails />}
               />
 
             </Route>
