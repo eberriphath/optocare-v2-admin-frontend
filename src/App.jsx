@@ -22,6 +22,9 @@ import Products from "./pages/Products"
 import ProductDetails from "./pages/ProductDetails"
 import Reviews from "./pages/Reviews"
 import ReviewDetails from "./pages/ReviewDetails"
+import ChangePassword from "./pages/ChangePassword"
+import ForgotPassword from "./pages/ForgotPassword"
+import ResetPassword from "./pages/ResetPassword"
 
 function App() {
   return (
@@ -34,6 +37,16 @@ function App() {
           <Route
             path="/login"
             element={<Login />}
+          />
+
+          <Route
+            path="/forgot-password"
+            element={<ForgotPassword />}
+          />
+
+          <Route
+            path="/reset-password"
+            element={<ResetPassword />}
           />
 
           <Route element={<ProtectedRoute />}>
@@ -93,6 +106,11 @@ function App() {
               <Route
                 path="/reviews/:id"
                 element={<ReviewDetails />}
+              />
+
+              <Route
+                path="/change-password"
+                element={<ChangePassword />}
               />
 
             </Route>
