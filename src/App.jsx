@@ -25,6 +25,12 @@ import ReviewDetails from "./pages/ReviewDetails"
 import ChangePassword from "./pages/ChangePassword"
 import ForgotPassword from "./pages/ForgotPassword"
 import ResetPassword from "./pages/ResetPassword"
+import Clients from "./pages/Clients"
+import ClientDetails from "./pages/ClientDetails"
+import Prescriptions from "./pages/Prescriptions"
+import PrescriptionDetails from "./pages/PrescriptionDetails"
+import Orders from "./pages/Orders"
+import OrderDetails from "./pages/OrderDetails"
 
 function App() {
   return (
@@ -96,6 +102,36 @@ function App() {
               <Route
                 path="/products/:id"
                 element={<ProductDetails />}
+              />
+
+              <Route
+                path="/clients"
+                element={<Clients />}
+              />
+
+              <Route
+                path="/clients/:id"
+                element={<ClientDetails />}
+              />
+
+              <Route
+                path="/prescriptions"
+                element={<Prescriptions />}
+              />
+
+              <Route
+                path="/prescriptions/:id"
+                element={<PrescriptionDetails />}
+              />
+
+              <Route
+                path="/orders"
+                element={<Orders />}
+              />
+
+              <Route
+                path="/orders/:id"
+                element={<OrderDetails />}
               />
 
               <Route
