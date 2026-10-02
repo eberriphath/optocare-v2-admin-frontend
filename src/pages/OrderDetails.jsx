@@ -235,16 +235,41 @@ function OrderDetails() {
         }
     };
 
-    const handleStatusUpdate = async () => {
-        /*
-         * The backend status-transition endpoint will be
-         * added later. For now this deliberately does not
-         * send a request.
-         */
-        setError(
-            "Status changes will be enabled when the order workflow endpoint is completed."
+const handleStatusUpdate = async () => {
+    try {
+        setStatusSaving(true);
+        setError("");
+        setSuccess("");
+
+        const response = await api.put(
+            `/orders/${id}/status`,
+            {
+                status,
+            }
         );
-    };
+
+        const updatedOrder =
+            response.data.order ||
+            response.data;
+
+        setOrder(updatedOrder);
+
+        setStatus(updatedOrder.status || "");
+
+        setSuccess(
+            "Order status updated successfully."
+        );
+    } catch (err) {
+        console.error(err);
+
+        setError(
+            err.response?.data?.message ||
+            "Failed to update order status."
+        );
+    } finally {
+        setStatusSaving(false);
+    }
+};
 
     const formatStatus = (value) => {
         return value
