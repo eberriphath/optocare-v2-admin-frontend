@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import api from "../services/api";
@@ -80,14 +81,25 @@ function Prescriptions() {
         <div className="space-y-6">
 
             {/* Header */}
-            <div>
-                <h1 className="text-2xl font-semibold text-gray-900">
-                    Prescriptions
-                </h1>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
-                <p className="mt-1 text-sm text-gray-500">
-                    Manage client optical prescriptions.
-                </p>
+                <div>
+                    <h1 className="text-2xl font-semibold text-gray-900">
+                        Prescriptions
+                    </h1>
+
+                    <p className="mt-1 text-sm text-gray-500">
+                        Manage client optical prescriptions.
+                    </p>
+                </div>
+
+                <Link
+                    to="/prescriptions/new"
+                    className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+                >
+                    + Add Prescription
+                </Link>
+
             </div>
 
             {/* Search */}

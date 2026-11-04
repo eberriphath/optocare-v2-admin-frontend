@@ -29,17 +29,15 @@ import Clients from "./pages/Clients"
 import ClientDetails from "./pages/ClientDetails"
 import Prescriptions from "./pages/Prescriptions"
 import PrescriptionDetails from "./pages/PrescriptionDetails"
+import PrescriptionCreate from "./pages/PrescriptionCreate"
 import Orders from "./pages/Orders"
 import OrderDetails from "./pages/OrderDetails"
 
 function App() {
   return (
     <BrowserRouter>
-
       <AuthProvider>
-
         <Routes>
-
           <Route
             path="/login"
             element={<Login />}
@@ -56,7 +54,6 @@ function App() {
           />
 
           <Route element={<ProtectedRoute />}>
-
             <Route element={<AdminLayout />}>
 
               <Route
@@ -79,7 +76,7 @@ function App() {
                 element={<Partners />}
               />
 
-              <Route 
+              <Route
                 path="/partners/:id"
                 element={<PartnerDetails />}
               />
@@ -120,6 +117,11 @@ function App() {
               />
 
               <Route
+                path="/prescriptions/new"
+                element={<PrescriptionCreate />}
+              />
+
+              <Route
                 path="/prescriptions/:id"
                 element={<PrescriptionDetails />}
               />
@@ -138,7 +140,7 @@ function App() {
                 path="/reviews"
                 element={<Reviews />}
               />
-         
+
               <Route
                 path="/reviews/:id"
                 element={<ReviewDetails />}
@@ -150,18 +152,14 @@ function App() {
               />
 
             </Route>
-
           </Route>
 
           <Route
             path="*"
             element={<Navigate to="/dashboard" replace />}
           />
-
         </Routes>
-
       </AuthProvider>
-
     </BrowserRouter>
   )
 }
