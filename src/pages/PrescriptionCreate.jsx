@@ -1,17 +1,23 @@
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import api from "../services/api"
 
 function PrescriptionCreate() {
   const navigate = useNavigate()
 
-  const [clients, setClients] = useState([])
-  const [clientSearch, setClientSearch] = useState("")
-  const [selectedClient, setSelectedClient] = useState(null)
-  const [loadingClients, setLoadingClients] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [conflict, setConflict] = useState(null)
+  const [pendingPayload, setPendingPayload] = useState(null)
+
+  const [clientData, setClientData] = useState({
+    full_name: "",
+    phone: "",
+    email: "",
+    date_of_birth: "",
+    notes: "",
+  })
 
   const [formData, setFormData] = useState({
     prescription_date: new Date().toISOString().split("T")[0],
@@ -32,31 +38,14 @@ function PrescriptionCreate() {
     notes: "",
   })
 
-  useEffect(() => {
-    const searchClients = async () => {
-      setLoadingClients(true)
+  const handleClientChange = (e) => {
+    const { name, value } = e.target
 
-      try {
-        const response = await api.get("/clients", {
-          params: {
-            search: clientSearch,
-            page: 1,
-            per_page: 20,
-          },
-        })
-
-        setClients(response.data.clients || [])
-      } catch (err) {
-        setError("Unable to load clients.")
-      } finally {
-        setLoadingClients(false)
-      }
-    }
-
-    const delay = setTimeout(searchClients, 300)
-
-    return () => clearTimeout(delay)
-  }, [clientSearch])
+    setClientData((previous) => ({
+      ...previous,
+      [name]: value,
+    }))
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -67,50 +56,119 @@ function PrescriptionCreate() {
     }))
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError("")
-
-    if (!selectedClient) {
-      setError("Please select a client.")
-      return
-    }
-
+  const submitPrescription = async (payload) => {
     setSaving(true)
+    setError("")
+    setConflict(null)
 
     try {
-      const payload = {
-        client_id: selectedClient.id,
-        prescription_date: formData.prescription_date,
-
-        right_sph: formData.right_sph,
-        right_cyl: formData.right_cyl,
-        right_axis: formData.right_axis,
-        right_add: formData.right_add,
-        right_pd: formData.right_pd,
-
-        left_sph: formData.left_sph,
-        left_cyl: formData.left_cyl,
-        left_axis: formData.left_axis,
-        left_add: formData.left_add,
-        left_pd: formData.left_pd,
-
-        source: formData.source,
-        notes: formData.notes,
-      }
-
       await api.post("/prescriptions", payload)
 
       navigate("/prescriptions")
     } catch (err) {
-      setError(
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        "Failed to create prescription."
-      )
+      const responseData = err.response?.data
+
+      if (
+        err.response?.status === 409 &&
+        responseData?.requires_confirmation
+      ) {
+        const matches = responseData.matches || []
+
+        const normalizeName = (name) =>
+          name.trim().toLowerCase().replace(/\s+/g, " ")
+
+        const hasSameName = matches.some(
+          (client) =>
+            normalizeName(client.full_name) ===
+            normalizeName(clientData.full_name)
+        )
+
+        setPendingPayload(payload)
+
+        setConflict({
+          message: responseData.message,
+          matches,
+          allowSeparateClient: !hasSameName,
+        })
+      } else {
+        setError(
+          responseData?.message ||
+          responseData?.error ||
+          "Failed to create prescription."
+        )
+      }
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
+    setError("")
+    setConflict(null)
+
+    if (!clientData.full_name.trim()) {
+      setError("Client name is required.")
+      return
+    }
+
+    if (!clientData.phone.trim()) {
+      setError("Client phone number is required.")
+      return
+    }
+
+    const payload = {
+      client: {
+        full_name: clientData.full_name.trim(),
+        phone: clientData.phone.trim(),
+        email: clientData.email.trim(),
+        date_of_birth: clientData.date_of_birth || null,
+        notes: clientData.notes.trim(),
+      },
+
+      prescription_date: formData.prescription_date,
+
+      right_sph: formData.right_sph,
+      right_cyl: formData.right_cyl,
+      right_axis: formData.right_axis,
+      right_add: formData.right_add,
+      right_pd: formData.right_pd,
+
+      left_sph: formData.left_sph,
+      left_cyl: formData.left_cyl,
+      left_axis: formData.left_axis,
+      left_add: formData.left_add,
+      left_pd: formData.left_pd,
+
+      source: formData.source,
+      notes: formData.notes,
+    }
+
+    await submitPrescription(payload)
+  }
+
+  const useExistingClient = async (client) => {
+    if (!pendingPayload) return
+
+    const payload = {
+      ...pendingPayload,
+      client_id: client.id,
+    }
+
+    delete payload.client
+    delete payload.allow_duplicate_phone
+
+    await submitPrescription(payload)
+  }
+
+  const createSeparateClient = async () => {
+    if (!pendingPayload) return
+
+    await submitPrescription({
+      ...pendingPayload,
+      allow_duplicate_phone: true,
+    })
   }
 
   const inputStyle = {
@@ -194,8 +252,9 @@ function PrescriptionCreate() {
       >
         <div>
           <h1 style={{ margin: 0 }}>Add Prescription</h1>
+
           <p style={{ color: "#6b7280", marginBottom: 0 }}>
-            Record a new client's eye prescription.
+            Enter client details and record their eye prescription.
           </p>
         </div>
 
@@ -228,6 +287,108 @@ function PrescriptionCreate() {
         </div>
       )}
 
+      {conflict && (
+        <div
+          style={{
+            background: "#fff7ed",
+            border: "1px solid #fed7aa",
+            borderRadius: "8px",
+            padding: "20px",
+            marginBottom: "20px",
+          }}
+        >
+          <h3 style={{ marginTop: 0, color: "#9a3412" }}>
+            Client verification required
+          </h3>
+
+          <p style={{ color: "#7c2d12" }}>
+            {conflict.message}
+          </p>
+
+          <p style={{ fontWeight: "600" }}>
+            Existing client records:
+          </p>
+
+          {conflict.matches.map((client) => (
+            <div
+              key={client.id}
+              style={{
+                background: "#fff",
+                border: "1px solid #e5e7eb",
+                borderRadius: "6px",
+                padding: "12px",
+                marginBottom: "10px",
+              }}
+            >
+              <strong>{client.full_name}</strong>
+
+              <p style={{ margin: "4px 0", fontSize: "13px" }}>
+                {client.client_number} · {client.phone}
+              </p>
+
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => useExistingClient(client)}
+                style={{
+                  padding: "8px 12px",
+                  background: "#2563eb",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "5px",
+                  cursor: saving ? "not-allowed" : "pointer",
+                }}
+              >
+                Use this existing client
+              </button>
+            </div>
+          ))}
+
+          {conflict.allowSeparateClient && (
+            <div style={{ marginTop: "16px" }}>
+              <p style={{ fontSize: "13px", color: "#7c2d12" }}>
+                If this is a different person who shares the same
+                phone number, you can create a separate client record.
+              </p>
+
+              <button
+                type="button"
+                disabled={saving}
+                onClick={createSeparateClient}
+                style={{
+                  padding: "10px 14px",
+                  background: "#15803d",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: saving ? "not-allowed" : "pointer",
+                }}
+              >
+                Confirm and create separate client
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setConflict(null)
+              setPendingPayload(null)
+            }}
+            style={{
+              marginTop: "14px",
+              padding: "9px 14px",
+              background: "#f3f4f6",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}
+          >
+            Cancel verification
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit}>
         <div
           style={{
@@ -240,97 +401,82 @@ function PrescriptionCreate() {
         >
           <h3 style={{ marginTop: 0 }}>Client Information</h3>
 
-          {selectedClient ? (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: "12px",
-                padding: "12px",
-                background: "#eff6ff",
-                borderRadius: "6px",
-              }}
-            >
-              <div>
-                <strong>{selectedClient.full_name}</strong>
-                <p style={{ margin: "4px 0", fontSize: "13px" }}>
-                  {selectedClient.client_number} · {selectedClient.phone}
-                </p>
-              </div>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Full Name *</label>
 
-              <button
-                type="button"
-                onClick={() => setSelectedClient(null)}
-              >
-                Change
-              </button>
-            </div>
-          ) : (
+            <input
+              type="text"
+              name="full_name"
+              value={clientData.full_name}
+              onChange={handleClientChange}
+              required
+              maxLength={150}
+              style={inputStyle}
+              placeholder="Enter client's full name"
+            />
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "14px",
+            }}
+          >
             <div style={fieldStyle}>
-              <label style={labelStyle}>Search and select client</label>
+              <label style={labelStyle}>Phone Number *</label>
 
               <input
-                type="text"
-                value={clientSearch}
-                onChange={(e) => setClientSearch(e.target.value)}
-                placeholder="Search by name, client number, phone or email..."
+                type="tel"
+                name="phone"
+                value={clientData.phone}
+                onChange={handleClientChange}
+                required
+                maxLength={30}
+                style={inputStyle}
+                placeholder="e.g. 0712345678"
+              />
+            </div>
+
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Email Address</label>
+
+              <input
+                type="email"
+                name="email"
+                value={clientData.email}
+                onChange={handleClientChange}
+                maxLength={150}
+                style={inputStyle}
+                placeholder="client@example.com"
+              />
+            </div>
+
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Date of Birth</label>
+
+              <input
+                type="date"
+                name="date_of_birth"
+                value={clientData.date_of_birth}
+                onChange={handleClientChange}
                 style={inputStyle}
               />
-
-              {loadingClients && (
-                <p style={{ fontSize: "13px", color: "#6b7280" }}>
-                  Searching clients...
-                </p>
-              )}
-
-              {clientSearch.trim() !== "" && (
-                <div
-                  style={{
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "6px",
-                    marginTop: "6px",
-                    maxHeight: "220px",
-                    overflowY: "auto",
-                  }}
-                >
-                  {clients.map((client) => (
-                    <button
-                      key={client.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedClient(client)
-                        setClientSearch("")
-                        setClients([])
-                      }}
-                      style={{
-                        display: "block",
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "12px",
-                        border: "none",
-                        borderBottom: "1px solid #e5e7eb",
-                        background: "#fff",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <strong>{client.full_name}</strong>
-                      <br />
-                      <small>
-                        {client.client_number} · {client.phone}
-                      </small>
-                    </button>
-                  ))}
-
-                  {!loadingClients && clients.length === 0 && (
-                    <p style={{ padding: "12px", color: "#6b7280" }}>
-                      No clients found.
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
-          )}
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Client Notes</label>
+
+            <textarea
+              name="notes"
+              value={clientData.notes}
+              onChange={handleClientChange}
+              rows="3"
+              style={inputStyle}
+              placeholder="Additional client information..."
+            />
+          </div>
         </div>
 
         <div
@@ -345,7 +491,7 @@ function PrescriptionCreate() {
           <h3 style={{ marginTop: 0 }}>Prescription Information</h3>
 
           <div style={{ ...fieldStyle, maxWidth: "250px" }}>
-            <label style={labelStyle}>Prescription Date</label>
+            <label style={labelStyle}>Prescription Date *</label>
 
             <input
               type="date"
@@ -382,13 +528,14 @@ function PrescriptionCreate() {
               name="source"
               value={formData.source}
               onChange={handleChange}
+              maxLength={150}
               style={inputStyle}
               placeholder="e.g. Optocare examination room, external optometrist"
             />
           </div>
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>Notes</label>
+            <label style={labelStyle}>Prescription Notes</label>
 
             <textarea
               name="notes"
@@ -404,15 +551,15 @@ function PrescriptionCreate() {
         <div style={{ display: "flex", gap: "12px" }}>
           <button
             type="submit"
-            disabled={saving || !selectedClient}
+            disabled={saving}
             style={{
               padding: "12px 22px",
               background: "#2563eb",
               color: "#fff",
               border: "none",
               borderRadius: "6px",
-              cursor: saving || !selectedClient ? "not-allowed" : "pointer",
-              opacity: saving || !selectedClient ? 0.6 : 1,
+              cursor: saving ? "not-allowed" : "pointer",
+              opacity: saving ? 0.6 : 1,
             }}
           >
             {saving ? "Saving..." : "Save Prescription"}
